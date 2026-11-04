@@ -21,7 +21,6 @@ object MeasurementStore {
         val measNo = numberPattern.find(raw)?.groupValues?.get(1) ?: ""
         val previousNo = prefs.getString("lastMeasNo", "") ?: ""
         if (source == "DMA35" && measNo.isNotEmpty() && previousNo == measNo) return null
-        if (prefs.getString("latest", "") == value && now - prefs.getLong("receivedAt", 0L) < 2000L) return null
         val sample = samplePattern.find(raw)?.groupValues?.get(1) ?: ""
         val stamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(now))
         val file = context.getFileStreamPath(FILE)
@@ -32,7 +31,8 @@ object MeasurementStore {
             it.appendLine(listOf(stamp, source, measNo, sample, value).joinToString(",") { field -> "\"${field.replace("\"", "\"\"")}\"" })
         }
         prefs.edit().putString("latest", value).putLong("receivedAt", now).putString("status", "Received ($source)").putString("lastMeasNo", if (source == "DMA35") measNo else previousNo).apply()
-        DensityBus.publish(value)
+        PendingInput.offer(context, value)
+        DensityBus.notifyMeasurement()
         return value
     }
     fun csv(context: Context): String = context.getFileStreamPath(FILE).takeIf { it.exists() }?.readText() ?: "received_at,source,measurement_no,sample_id,density_at_25c_g_cm3\n"

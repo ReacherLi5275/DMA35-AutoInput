@@ -67,7 +67,7 @@ class ReceiverService : Service() {
                             }
                         }
                     } catch (_: Exception) { }
-                    if (running) state("Disconnected · waiting")
+                    if (running) state("Listening for DMA35")
                 }
             } catch (e: SecurityException) { state("Bluetooth permission required"); break }
               catch (e: Exception) { if (running) state("Receiver error: ${e.message}") }

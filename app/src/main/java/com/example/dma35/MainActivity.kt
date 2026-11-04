@@ -24,7 +24,7 @@ class MainActivity : Activity() {
         fun text(t: String, size: Float = 15f) = TextView(this).apply { text = t; textSize = size; setPadding(0, 7, 0, 7) }
         fun button(t: String, f: () -> Unit) { root.addView(Button(this).apply { text = t; isAllCaps = false; setOnClickListener { f() } }) }
         root.addView(text("DMA35 Bridge", 28f))
-        root.addView(text("Bluetooth density capture · v3.1 pilot", 14f))
+        root.addView(text("Bluetooth density capture · v3.2 field trial", 14f))
         status = text("", 16f); latest = text("", 31f)
         root.addView(status); root.addView(latest)
         mode = Switch(this).apply { text = "Automatic input"; isChecked = p.getBoolean("auto", true); setOnCheckedChangeListener { _, b -> p.edit().putBoolean("auto", b).apply() } }
@@ -41,16 +41,15 @@ class MainActivity : Activity() {
         }
         root.addView(direction)
         button("Start Bluetooth receiver") { startReceiver() }
-        button("Stop receiver") { stopService(Intent(this, ReceiverService::class.java)); p.edit().putString("status", "Stopped").apply(); refresh() }
+        button("Stop receiver") { stopService(Intent(this, ReceiverService::class.java)); p.edit().putBoolean("startOnce", false).putString("status", "Stopped").apply(); refresh() }
         button("Enable DMA35 keyboard") { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) }
         button("Select DMA35 keyboard") { (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).showInputMethodPicker() }
-        root.addView(text("Local input test", 17f))
-        root.addView(EditText(this).apply { hint = "Density @25°C"; inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL })
         button("Export CSV for Excel") {
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"; putExtra(Intent.EXTRA_TITLE, "DMA35_measurements.csv") }
             startActivityForResult(intent, exportRequest)
         }
         button("Refresh status") { refresh() }
+        button("Clear pending input") { PendingInput.clear(this); refresh() }
         root.addView(text("Receives only data transmitted by DMA35. Save-to-send must be enabled on the instrument, if supported. Input requires the DMA35 keyboard and a focused editable field. Verify field navigation in each target app. Do not use for controlled production records until site validation is complete.", 12f).apply { gravity = Gravity.CENTER_HORIZONTAL })
         setContentView(ScrollView(this).apply { addView(root) })
         refresh()
@@ -84,6 +83,7 @@ class MainActivity : Activity() {
     private fun refresh() {
         status.text = "Bluetooth · ${p.getString("status", "Not started")}" 
         latest.text = p.getString("latest", "—") ?: "—"
+        status.append("\nInput: ${p.getString("inputStatus", "Waiting for measurement")}\nPending: ${if (PendingInput.peek(this) != null) "1" else "0"}")
     }
     override fun onResume() { super.onResume(); if (::status.isInitialized) refresh() }
 }
