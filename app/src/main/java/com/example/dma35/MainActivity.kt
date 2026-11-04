@@ -24,7 +24,7 @@ class MainActivity : Activity() {
         fun text(t: String, size: Float = 15f) = TextView(this).apply { text = t; textSize = size; setPadding(0, 7, 0, 7) }
         fun button(t: String, f: () -> Unit) { root.addView(Button(this).apply { text = t; isAllCaps = false; setOnClickListener { f() } }) }
         root.addView(text("DMA35 Bridge", 28f))
-        root.addView(text("Bluetooth density capture · v3.2 field trial", 14f))
+        root.addView(text("Bluetooth density capture · v3.3 connection diagnostics", 14f))
         status = text("", 16f); latest = text("", 31f)
         root.addView(status); root.addView(latest)
         mode = Switch(this).apply { text = "Automatic input"; isChecked = p.getBoolean("auto", true); setOnCheckedChangeListener { _, b -> p.edit().putBoolean("auto", b).apply() } }
@@ -84,6 +84,10 @@ class MainActivity : Activity() {
         status.text = "Bluetooth · ${p.getString("status", "Not started")}" 
         latest.text = p.getString("latest", "—") ?: "—"
         status.append("\nInput: ${p.getString("inputStatus", "Waiting for measurement")}\nPending: ${if (PendingInput.peek(this) != null) "1" else "0"}")
+        status.append("\nConnections: ${p.getLong("connections", 0)} | Bytes: ${p.getLong("receivedBytes", 0)}")
+        status.append("\nLast connection: ${p.getString("lastConnection", "None")}")
+        status.append("\nLast parse: ${p.getString("lastParse", "None")}")
+        status.append("\nLast error: ${p.getString("lastError", "None")}")
     }
     override fun onResume() { super.onResume(); if (::status.isInitialized) refresh() }
 }
