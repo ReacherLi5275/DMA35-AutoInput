@@ -33,11 +33,11 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build APK
-        run: gradle assembleDebug --stacktrace
+        run: gradle -p DMA35AutoInput assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: DMA35-AutoInput-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: DMA35AutoInput/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
