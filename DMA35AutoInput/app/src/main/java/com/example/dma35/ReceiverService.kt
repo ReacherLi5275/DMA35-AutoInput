@@ -48,6 +48,7 @@ class ReceiverService : Service() {
                         val input = s.inputStream
                         val bytes = ByteArray(512)
                         val record = ByteArrayOutputStream()
+                        val fullRecord = StringBuilder()
                         while (running) {
                             val n = input.read(bytes)
                             if (n < 0) break
@@ -57,7 +58,11 @@ class ReceiverService : Service() {
                                     if (record.size() > 0) {
                                         val line = record.toString("ISO-8859-1")
                                         record.reset()
-                                        processLine(line)
+                                        fullRecord.append(line).append("\n")
+                                        if (line.contains("Density@25", ignoreCase = true)) {
+                                            MeasurementStore.ingest(this@ReceiverService, fullRecord.toString(), "DMA35")
+                                            fullRecord.setLength(0)
+                                        }
                                     }
                                 } else if (record.size() < 8192) record.write(b)
                                 else record.reset()
@@ -69,18 +74,6 @@ class ReceiverService : Service() {
             }
         } catch (e: SecurityException) { state("Bluetooth permission missing: ${e.message}") }
           catch (e: Exception) { if (running) state("Receiver error: ${e.message}") }
-    }
-    private fun processLine(line: String) {
-        val match = Regex("Density@25[^:]*:\\s*([0-9]+(?:[.,][0-9]+)?)", RegexOption.IGNORE_CASE).find(line) ?: return
-        val value = match.groupValues[1].replace(',', '.')
-        val number = value.toDoubleOrNull() ?: return
-        if (number !in 0.5..2.0) { state("Density out of test range: $value"); return }
-        val prefs = getSharedPreferences("dma35", MODE_PRIVATE)
-        val now = System.currentTimeMillis()
-        // Ignore a duplicated identical value within 2 seconds; intentional repeats later are allowed.
-        if (prefs.getString("latest", "") == value && now - prefs.getLong("receivedAt", 0) < 2000) return
-        prefs.edit().putString("latest", value).putLong("receivedAt", now).apply()
-        DensityBus.publish(value)
     }
     override fun onDestroy() { running = false; try { server?.close() } catch (_: Exception) {}; super.onDestroy() }
 }
